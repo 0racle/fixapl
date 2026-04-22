@@ -86,7 +86,7 @@ update:  npm i -g fixapl`);
   stdin.setRawMode(true);
   let tabEntered = false;
   const origTtyWrite = rl._ttyWrite.bind(rl);
-  rl._ttyWrite = function(ch, key) {
+  rl._ttyWrite = (ch, key) => {
     if (tabEntered) {
       tabEntered = false;
       if (ch in keyboard) {
@@ -100,28 +100,30 @@ update:  npm i -g fixapl`);
     return origTtyWrite(ch, key);
   };
   rl.on('line', async (line) => {
-    if (line.trim().length > 0) {
-      try {
-        const tks = lex(line.trim());
-        const f = tks.map((k) => k.image).join("");
-        rl.history[0] = f // replace history with formatted line
-        const t = tks.filter((t) => !"whitespace,comment".includes(t.kind));
-        const x = new Parser(t).program()[0];
+    if (line.trim().length > 0) try {
+      const tks = lex(line.trim());
+      // replace input with formatted/highlighted code
+      const o = Math.ceil(line.length / process.stdout.columns)
+      readline.moveCursor(rl.output, 0, -o)
+      rl.output.write(prompt + highlight(tks));
+      readline.clearLine(rl.output, 1)
+      rl.output.write("\n")
+      // replace history with formatted line
+      rl.history[0] = tks.map((k) => k.image).join("");
+      // filter executable code
+      const c = tks.filter((t) => !"whitespace,comment".includes(t.kind));
+      if (c.length !== 0) {
+        const x = new Parser(c).program()[0];
         const r = await v.visit(x);
-        if (x.kind === "binding")
+        if (x.kind === "binding") {
           bdg[x.name] = r.kind === "function" ? r.arity : 0;
-        let o = Math.ceil(line.length / process.stdout.columns) // output rows
-        readline.moveCursor(rl.output, 0, -o)
-        rl.output.write(prompt + highlight(tks));
-        readline.clearLine(rl.output, 1)
-        rl.output.write("\n")
-        if (x.kind !== "binding") {
+        } else {
           const out = await pretty(await execnilad(r));
           rl.output.write(out.join("\n") + "\n");
         }
-      } catch (e) {
-        console.error(kleur.red(e instanceof Error ? e.message : e + ""));
       }
+    } catch (e) {
+      console.error(kleur.red(e instanceof Error ? e.message : e + ""));
     }
     rl.prompt()
   });
