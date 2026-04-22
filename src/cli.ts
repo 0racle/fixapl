@@ -16,8 +16,6 @@ import { version } from "../package.json";
 const verStr = `FIXAPL v${version}`;
 
 const prompt = "".padEnd(8);
-const w = () => stdout.getWindowSize()[0] - prompt.length - 1;
-const h = (s: string) => Math.floor(s.length / w()) + 1;
 const fmt = (s: string) =>
   lex(s)
     .map((x) => x.image)
