@@ -15,7 +15,6 @@ import keyboard from "./keyboard.json";
 import { version } from "../package.json";
 const verStr = `FIXAPL v${version}`;
 
-const prompt = "".padEnd(8);
 const fmt = (s: string) =>
   lex(s)
     .map((x) => x.image)
@@ -42,8 +41,50 @@ const highlight = (tks: Token[]) =>
     })
     .join("");
 let root = cwd();
+// create readline interface
+const rl = readline.createInterface({
+  input: stdin,
+  output: stdout,
+  terminal: true,
+  prompt: "".padEnd(8),
+});
+rl.on('SIGINT', () => { exit(1) });
+// handle tab-prefix mappings
+let tabEntered = false;
+const origTtyWrite = rl._ttyWrite.bind(rl);
+function replTtyWrite(ch, key) {
+  if (tabEntered) {
+    tabEntered = false;
+    if (ch in keyboard) {
+      ch = keyboard[ch];
+    }
+  }
+  else if (key?.name === "tab") {
+    tabEntered = true;
+    return;
+  }
+  return origTtyWrite(ch, key);
+};
+rl._ttyWrite = replTtyWrite
+let lastWrite = ""
 const v = new Visitor({
-  write: (s) => stdout.write(s),
+  write: (s) => {
+    stdout.write(s);
+    lastWrite = s;
+  },
+  read: () =>
+    new Promise<string>((resolve) => {
+      let lastLine = lastWrite.split("\n").at(-1)
+      rl._ttyWrite = origTtyWrite
+      let saveHist = rl.history;
+      rl.history = []
+      rl.question(lastLine, (answer) => {
+        resolve(answer);
+        rl._ttyWrite = replTtyWrite
+        // rl.history.shift(); // delete answer from history
+        rl.history = saveHist
+      })
+    }),
   readFile: (p) => readFile(resolve(root, p), "utf8"),
 });
 async function run(s: string) {
@@ -72,40 +113,21 @@ update:  npm i -g fixapl`);
   await run(fileArg ? await read(fileArg) : await text(stdin));
   exit(0);
 } else if (argv[2] === "fmt") {
-  if (!argv[3]) stdout.write(fmt(await text(stdin)));
-  else await writeFile(argv[3], fmt(await read(argv[3])) + "\n");
+  rl.close()
+  if (!argv[3]) {
+    stdout.write(fmt(await text(stdin)));
+  } else {
+    await writeFile(argv[3], fmt(await read(argv[3])) + "\n");
+  }
 } else {
   console.log(`${verStr} REPL\n^C to close`);
-  let rl = readline.createInterface({
-    input: stdin,
-    output: stdout,
-    terminal: true,
-    prompt: prompt,
-  });
-  readline.emitKeypressEvents(stdin);
-  stdin.setRawMode(true);
-  let tabEntered = false;
-  const origTtyWrite = rl._ttyWrite.bind(rl);
-  rl._ttyWrite = (ch, key) => {
-    if (tabEntered) {
-      tabEntered = false;
-      if (ch in keyboard) {
-        ch = keyboard[ch];
-      }
-    }
-    else if (key?.name === "tab") {
-      tabEntered = true;
-      return;
-    }
-    return origTtyWrite(ch, key);
-  };
   rl.on('line', async (line) => {
     if (line.trim().length > 0) try {
       const tks = lex(line.trim());
       // replace input with formatted/highlighted code
       const o = Math.ceil(line.length / process.stdout.columns)
       readline.moveCursor(rl.output, 0, -o)
-      rl.output.write(prompt + highlight(tks));
+      rl.output.write(rl.getPrompt() + highlight(tks));
       readline.clearLine(rl.output, 1)
       rl.output.write("\n")
       // replace history with formatted line
