@@ -1,19 +1,21 @@
 #!/usr/bin/env node
-import { readFile, writeFile } from "fs/promises";
-import { text } from "stream/consumers";
-import { argv, cwd, exit, stdin, stdout } from "process";
-import { dirname, resolve } from "path";
-import readline from "readline";
+import { readFile, writeFile } from "node:fs/promises";
+import { text } from "node:stream/consumers";
+import { argv, cwd, exit, stdin, stdout } from "node:process";
+import { dirname, resolve } from "node:path";
+import readline from "node:readline";
 import kleur from "kleur";
 
-import { lex, Parser, Token, Visitor } from "./lang";
-import { execnilad, Val } from "./util";
-import pretty from "./pretty";
-import { quadsList } from "./quads";
-import keyboard from "./keyboard.json";
+import { lex, Parser, Token, Visitor } from "./lang.ts";
+import { execnilad, Val } from "./util.ts";
+import pretty from "./pretty.ts";
+import { quadsList } from "./quads.ts";
 
-import { version } from "../package.json";
-const verStr = `FIXAPL v${version}`;
+import keyboard from "./keyboard.json" with { type: "json" };
+const keymap = keyboard as Record<string, string>;
+
+import pkg from "../package.json" with { type: "json" };
+const verStr = `FIXAPL v${pkg.version}`;
 
 const fmt = (s: string) =>
   lex(s)
@@ -47,16 +49,16 @@ const rl = readline.createInterface({
   output: stdout,
   terminal: true,
   prompt: "".padEnd(8),
-});
+}) as any;
 rl.on('SIGINT', () => { exit(1) });
 // handle tab-prefix mappings
 let tabEntered = false;
 const origTtyWrite = rl._ttyWrite.bind(rl);
-function replTtyWrite(ch, key) {
+function replTtyWrite(ch: string, key: any) {
   if (tabEntered) {
     tabEntered = false;
-    if (ch in keyboard) {
-      ch = keyboard[ch];
+    if (ch in keymap) {
+      ch = keymap[ch];
     }
   }
   else if (key?.name === "tab") {
@@ -66,7 +68,7 @@ function replTtyWrite(ch, key) {
   return origTtyWrite(ch, key);
 };
 rl._ttyWrite = replTtyWrite
-let lastWrite = ""
+let lastWrite = "";
 const v = new Visitor({
   write: (s) => {
     stdout.write(s);
@@ -74,15 +76,14 @@ const v = new Visitor({
   },
   read: () =>
     new Promise<string>((resolve) => {
-      let lastLine = lastWrite.split("\n").at(-1)
-      rl._ttyWrite = origTtyWrite
+      let lastLine = lastWrite.split("\n").at(-1);
+      rl._ttyWrite = origTtyWrite;
       let saveHist = rl.history;
-      rl.history = []
-      rl.question(lastLine, (answer) => {
+      rl.history = [];
+      rl.question(lastLine, (answer: string) => {
         resolve(answer);
-        rl._ttyWrite = replTtyWrite
-        // rl.history.shift(); // delete answer from history
-        rl.history = saveHist
+        rl._ttyWrite = replTtyWrite;
+        rl.history = saveHist;
       })
     }),
   readFile: (p) => readFile(resolve(root, p), "utf8"),
@@ -97,7 +98,7 @@ async function run(s: string) {
 
 const read = (p: string) => readFile(resolve(cwd(), p), "utf8");
 
-if (["-v", "--version"].includes(argv[2])) console.log(version);
+if (["-v", "--version"].includes(argv[2])) console.log(pkg.version);
 else if (["-h", "--help", "help"].includes(argv[2])) {
   console.log(`${verStr}
 ${"-".repeat(verStr.length)}
@@ -121,7 +122,7 @@ update:  npm i -g fixapl`);
   }
 } else {
   console.log(`${verStr} REPL\n^C to close`);
-  rl.on('line', async (line) => {
+  rl.on('line', async (line: string) => {
     if (line.trim().length > 0) try {
       const tks = lex(line.trim());
       // replace input with formatted/highlighted code

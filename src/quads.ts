@@ -1,6 +1,6 @@
-import { quad, alpha, omega } from "./glyphs";
-import { ReplContext } from "./lang";
-import pretty from "./pretty";
+import { quad, alpha, omega } from "./glyphs.ts";
+import { ReplContext } from "./lang.ts";
+import pretty from "./pretty.ts";
 import {
   A,
   Arr,
@@ -13,7 +13,7 @@ import {
   Num,
   Val,
   vToImg,
-} from "./util";
+} from "./util.ts";
 
 export const quadsList = new Map<string, number>();
 

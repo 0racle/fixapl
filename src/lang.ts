@@ -14,9 +14,9 @@ import {
   cells,
   graphemes,
   nilad,
-} from "./util";
-import { glyphs, PrimitiveKind, prims, subscripts, omega } from "./glyphs";
-import quads from "./quads";
+} from "./util.ts";
+import { glyphs, PrimitiveKind, prims, subscripts, omega } from "./glyphs.ts";
+import quads from "./quads.ts";
 function primitiveByGlyph(s: string) {
   return Object.values(prims).find((v) => v.glyph === s)!.def;
 }

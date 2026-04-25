@@ -31,7 +31,7 @@ export const A = (shape: number[], data: Val[]) =>
     shape,
     data,
   }) satisfies Val;
-export { display } from "./primitives";
+export { display } from "./primitives.ts";
 export const range = (shape: number[]): Val =>
   A(
     shape,

@@ -1,4 +1,4 @@
-import { asyncMap, cells, display, isString, Val } from "./util";
+import { asyncMap, cells, display, isString, Val } from "./util.ts";
 
 type CharSet = Record<
   | `${"t" | "b"}${"l" | "r"}`

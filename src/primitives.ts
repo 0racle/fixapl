@@ -21,8 +21,8 @@ import {
   indices,
   prod,
   nilad,
-} from "./util";
-import { PrimitiveKind } from "./glyphs";
+} from "./util.ts";
+import { PrimitiveKind } from "./glyphs.ts";
 
 export async function display(val: Val): Promise<string> {
   if (val.kind === "number")

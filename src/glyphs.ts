@@ -1,5 +1,5 @@
-import * as p from "./primitives";
-import { order, type Entry } from "./primitives";
+import * as p from "./primitives.ts";
+import { order, type Entry } from "./primitives.ts";
 
 export const subscripts = "₀₁₂012";
 export const quad = "⎕";
